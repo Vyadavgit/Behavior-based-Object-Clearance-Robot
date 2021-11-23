@@ -12,4 +12,17 @@ import math
 COLOR_BLUE = 2
 COLOR_RED = 5
 
+wheelCirc = (5.5*3.14159)/100 # meters
+
+ev3 = EV3Brick()
+
+# Initialize the color sensor.
+line_sensor = ev3.ColorSensor(#port here)
+
+#Initialize the motors
+rightMotor = Motor(Port.A, Direction.COUNTERCLOCKWISE)
+leftMotor = Motor(Port.B, Direction.COUNTERCLOCKWISE)
+
+def wander()
+
 def follow_line()
