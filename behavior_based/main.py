@@ -28,49 +28,22 @@ def rotate(right, left, angle=420, velocity = 150):
     left.run_target(velocity, -angle)
 
 
-# Wall follow will follow a wall for 60cm, if the wall is not cleared, it will return 60cm. 
-# Else wall follow will return how far the robot followed the wall. 
-# if we move a certain distance, look for object
-    # if we cant find the object choose random direction and repeat 
-# if we find a wall call wallFollow 
-    # if wall follow (ret val ) < .6 turn right 
-        # find new direction to move
-    # else turn left 
-        # look for object 
-        # etc
-# if we 
-def wallFollow(color, sensor):
+def wallFollow(color, sensor, right, left):
     dist = 0
     while color == sensor.color():
-        goToTarget(rightMotor, leftMotor, .05)
-    else: 
-        return dist
-
-
-# Create your objects here.
-ev3 = EV3Brick()
-rightMotor = Motor(Port.A, Direction.COUNTERCLOCKWISE)
-leftMotor = Motor(Port.D, Direction.COUNTERCLOCKWISE)
-colorSensor = ColorSensor(Port.S4)
-sonicSensor = UltrasonicSensor(Port.S1)
-
-# Write your program here.
-ev3.speaker.beep()
-tileColor = colorSensor.color()  # Tile color
-boolean = True
-# while(boolean):
-#     if tileColor == colorSensor.color():
-#         goToTarget(rightMotor, leftMotor, .05)
-#     else: 
-#         rotate(rightMotor, leftMotor, 180)
-#         wallFollow(colorSensor.color(), colorSensor)
-#         boolean = False
-        
-while(boolean):
-    print(colorSensor.color())
-    print(sonicSensor.distance()/10)
-    time.sleep(1)
-
+        if dist == .6:
+            return dist
+        else; 
+            goToTarget(right, left, .05)
+            dist = dist + .05
+    else:
+        # do a rotation to check that we aren't at corner 
+        rotate(right, left, -180)
+        if color == sensor.color(): 
+            return wallFollow(color, sensor, right, left)
+        else: 
+            rotate(right, left, 180)
+            return dist
 
 def objectFound(distance, color):
     if distance <= 0.3048 and color=="RED": # i.e., 1 ft
@@ -79,7 +52,7 @@ def objectFound(distance, color):
     else: 
         return 0
 
-def wander(distance, sensor, right, left):
+def wander(distance, color, sonic, right, left):
     # choose some direction
     # Keep moving in direction until 
     # 1. move a certain distance 
@@ -99,6 +72,21 @@ def wander(distance, sensor, right, left):
     
     if sensor.color() =="BLUE":
         rotate(right, left, 90, 150) # 90 degrees left turn
-        wallFollow(sensor.color(), sensor)
+        wallFollow(sensor.color(), sensor, right, left)
     # elif sensor.color()=="RED":
     #     # call 'goal finding'
+
+# Create your objects here.
+def main():
+    ev3 = EV3Brick()
+    rightMotor = Motor(Port.A, Direction.COUNTERCLOCKWISE)
+    leftMotor = Motor(Port.D, Direction.COUNTERCLOCKWISE)
+    colorSensor = ColorSensor(Port.S4)
+    sonicSensor = UltrasonicSensor(Port.S1)
+
+    # Write your program here.
+    ev3.speaker.beep()
+    tileColor = colorSensor.color()  # Tile color
+    boolean = True
+    while(boolean):
+        wander(.05, colorSensor, sonicSensor, right, left)
