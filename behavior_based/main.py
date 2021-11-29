@@ -3,6 +3,7 @@
 from pybricks.hubs import EV3Brick
 from pybricks.ev3devices import (Motor, TouchSensor, ColorSensor,
                                  InfraredSensor, UltrasonicSensor, GyroSensor)
+from pybricks.nxtdevices import (LightSensor)
 from pybricks.parameters import Port, Stop, Direction, Button, Color
 from pybricks.tools import wait, StopWatch, DataLog
 from pybricks.robotics import DriveBase
@@ -37,8 +38,8 @@ def alignToWall(sensor, right, left):
     goToTarget(right, left, .05) # move forward a small distance
     rotate(right, left, 60)
     while(True):
-        if(sensor.color() == Color.RED):
-            while(sensor.color() == Color.RED):
+        if(sensor.color() == Color.BLUE):
+            while(sensor.color() == Color.BLUE):
                 rotate(right, left, 10)
             else:
                 rotate(right, left, -15)
@@ -47,8 +48,7 @@ def alignToWall(sensor, right, left):
     
 
 def wallFollow(sensor, right, left, dist):
-    while Color.RED == sensor.color():
-        print(dist)
+    while Color.BLUE == sensor.color():
         if dist >= .5:
             return dist
         else:
@@ -58,12 +58,12 @@ def wallFollow(sensor, right, left, dist):
         # do a rotation to check that we aren't at corner 
         # check to make sure we didn't clear the right side of a wall:
         rotate(right, left, 25) 
-        if Color.RED == sensor.color():
+        if Color.BLUE == sensor.color():
             rotate(right, left, -5)
             return wallFollow(sensor, right, left, dist)
         # check left side
         rotate(right, left, -50)
-        if Color.RED == sensor.color():
+        if Color.BLUE == sensor.color():
             rotate(right, left, 5)
             return wallFollow(sensor, right, left, dist)
         rotate(right, left, 25)
@@ -71,7 +71,7 @@ def wallFollow(sensor, right, left, dist):
         rotate(right, left, 60)
         for i in range(4):
             rotate(right, left, 15) # rotate left
-            if Color.RED == sensor.color(): 
+            if Color.BLUE == sensor.color(): 
                 return wallFollow(sensor, right, left, 0)
         else: 
             print("wall ended, travelled for")
@@ -115,7 +115,8 @@ def wander(colorS, sonicS, right, left):
         else: 
             right.stop()
             left.stop()
-            if(alignToWall(colorS, right, left)):
+            if(colorS.color() == Color.BLUE):
+                alignToWall(colorS, right, left)
                 distance = wallFollow(colorS, right, left, 0)
                 if distance == .5: # we've travelled the wall for too long. 
                     rotate(right, left, 90)
@@ -129,7 +130,7 @@ def wander(colorS, sonicS, right, left):
                     if findObject(sonicS, right, left):
                         boolean = False
             else:
-                rotate(right, left, 180)
+                boolean = False
 
 # Create your objects here.
 def main():
@@ -137,6 +138,7 @@ def main():
     rightMotor = Motor(Port.A, Direction.COUNTERCLOCKWISE)
     leftMotor = Motor(Port.D, Direction.COUNTERCLOCKWISE)
     colorSensor = ColorSensor(Port.S4)
+    # lightSensor = LightSensor(Port.S4)
     sonicSensor = UltrasonicSensor(Port.S1)
     # Write your program here.
     ev3.speaker.beep()
