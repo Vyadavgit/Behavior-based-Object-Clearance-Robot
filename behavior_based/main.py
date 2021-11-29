@@ -25,6 +25,32 @@ def rotate(right, left, angle=420, velocity = 150):
     resetAngles(right, left)
     right.run_target(velocity, angle, Stop.HOLD, False)
     left.run_target(velocity, -angle)
+    #Should we put a check in this function to make sure we aren't rotating through wall?
+
+def find_goal(curr_angle, color):
+    #choosing a threshold based on what I assume will be the size of the world 4.88m x 3.05m
+    #max distance for sensor is 255cm
+    #I'll choose a threshold that is half the distance of top left tile to bottom right tile
+    #What about chairs though?
+    if color != COLOR_RED:
+        threshold = 195.3
+    
+        rotate(rightMotor, leftMotor, curr_angle+45)
+        if sonicSensor.distance < threshold:
+            objDist = sonicSensor.distance
+            #Need to calculate the up/down and left/right distance
+            #Curr_angle either 0, 90, 180 or 360?
+            
+
+    else:
+        ev3.speaker.play_file(SoundFile.FANFARE)
+        while(color == COLOR_RED):
+            goToTarget(rightMotor, leftMotor, .05)
+            newDist = sonicSensor.distance
+            if newDist >= objDist:
+                #Not going in the right direction        
+            
+
 
 def wander():
     # choose some direction
