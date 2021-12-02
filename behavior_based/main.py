@@ -15,8 +15,8 @@ import random
 # Click "Open user guide" on the EV3 extension tab for more information.
 wheelCirc = (5.3975*3.14159)/100 # meters
 robotCirc = (12.065*3.14159)/100 # meters
-wallColor = Color.RED
-goalColor = Color.BLUE
+wallColor = 10
+goalColor = Color.RED
 ev3 = EV3Brick()
 
 
@@ -38,59 +38,75 @@ def rotate(right, left, angle=90, velocity = 150):
     right.run_target(velocity, desiredAngle, Stop.HOLD, False)
     left.run_target(velocity, -desiredAngle)
 
-def alignToWall(sensor, right, left):
+def alignToWall(sensor, leftSensor, right, left):
     goToTarget(right, left, .05) # move forward a small distance
+    if(leftSensor.reflection() > wallColor and sensor.reflection() <= wallColor):
+        goToTarget(right, left, -.075)
+        rotate(right, left, 20)
+        return False
     rotate(right, left, 25)
     for i in range(10):
-        if(sensor.color() == wallColor):
-            while(sensor.color() == wallColor):
+        if(sensor.reflection() <= wallColor):
+            while(sensor.reflection() <= wallColor):
                 rotate(right, left, 10)
             else:
-                rotate(right, left, -5)
+                rotate(right, left, -10)
                 return True
         rotate(right, left, 10) # Rotate to find the wall
     else:
         return False
-    
 
 def wallFollow(sensor, leftSensor, right, left, dist):
-    while wallColor == sensor.color():
+    while sensor.reflection() <= wallColor:
+        # Check inital Distance and return if followed for too long
         if dist >= 1.5:
             return 1.5
-        if leftSensor.color() == wallColor:
-            goToTarget(right, left, .05)
+        # If we run into a perpendicular wall, follow it
+        if leftSensor.reflection() <= wallColor:
+            while(sensor.reflection() <= wallColor and leftSensor.reflection() <= wallColor):
+                right.run(100)
+                left.run(100)
+            else:
+                right.stop()
+                left.stop()
+            goToTarget(right, left, .02)
             rotate(right, left, 60)
-            while sensor.color() != wallColor: 
+            while sensor.reflection() > wallColor: 
                 rotate(right, left, 5)
             else:
                 rotate(right, left, 5)
                 return wallFollow(sensor, leftSensor, right, left, 0)
         else:
-            goToTarget(right, left, .05)
-            dist = dist + .05
+            # Move along the wall
+            right.run(150)
+            left.run(150)
+            dist = dist + .0001
     else:
+        right.stop()
+        left.stop()
         # check to make sure we didn't clear the right side of a wall:
         rotate(right, left, 15) 
-        if wallColor == sensor.color():
+        if sensor.reflection() <= wallColor:
             rotate(right, left, -5)
             return wallFollow(sensor, leftSensor, right, left, dist)
         # check left side
         rotate(right, left, -30)
-        if wallColor == sensor.color():
+        if sensor.reflection() <= wallColor:
             rotate(right, left, 5)
             return wallFollow(sensor, leftSensor, right, left, dist)
         rotate(right, left, 15)
         # do a check that to make sure we aren't at corner 
-        goToTarget(right, left, -.05)
-        if wallColor == leftSensor.color():
-            goToTarget(right, left, .05)
-            rotate(right, left, 60)
-            while sensor.color() != wallColor: 
-                rotate(right, left, 5)
-            else:
-                rotate(right, left, 5)
-                return wallFollow(sensor, leftSensor, right, left, 0)
-        goToTarget(right, left, .05)
+        for i in range(3):
+            goToTarget(right, left, -.025)
+            if leftSensor.reflection() <= wallColor:
+                goToTarget(right, left, .05)
+                rotate(right, left, 60)
+                while sensor.reflection() > wallColor: 
+                    rotate(right, left, 5)
+                else:
+                    rotate(right, left, 5)
+                    return wallFollow(sensor, leftSensor, right, left, 0)
+        goToTarget(right, left, .125)
         return dist
 
 def findObject(sonicSens, right, left):
@@ -98,42 +114,65 @@ def findObject(sonicSens, right, left):
     for i in range(18):
         rotate(right, left, 20) # 20 degree increments
         dist = sonicSens.distance() / 1000
-        if dist < .6:
+        if dist < .45:
             return dist
     return 1
         # need to avoid walls and remember direction
 
+def moveObject(right, left, colorS, lColorS, sonicS):
+    boolean = True
+    # Check to see if object is in front of it
+    ev3.speaker.beep()
+    distance = sonicS.distance()/1000
+    if(distance < .2):
+        goToTarget(right,left, distance+.3)
+        return 
+    while(boolean):
+        goToTarget(right, left, .02)
+        if(colorS.color() != goalColor and lColorS.color() == goalColor):
+            while(colorS.color() != goalColor):
+                rotate(right, left, 5)
+        if(colorS.color() == goalColor and lColorS.color() != goalColor):
+            while(lColorS.color() != goalColor):
+                rotate(right, left, -5)
+        if(colorS.color() == goalColor and lColorS.color() == goalColor): 
+            rotate(right, left, 60)
+            shortestDist = 1
+            for i in range(10):
+                rotate(right, left, -10)
+                if shortestDist < sonicS.distance():
+                    shortestDist = (sonicS.distance()/1000)
+                if shortestDist < .25:  
+                    goToTarget(right, left, shortestDist+.3)
+                    return True
+
+
+
 def goToObject(right, left, rightSensor, leftSensor, sonar, distance):
     # goToTarget(right, left, distance)
-    while True:
-        if(rightSensor.color() == wallColor or rightSensor.color() == goalColor) or (leftSensor.color() == wallColor or rightSensor.color() == goalColor):
-            break
+    moving = True
+    while moving:
+        if(rightSensor.reflection() <= wallColor or rightSensor.color() == goalColor) or (leftSensor.reflection() <= wallColor or leftSensor.color() == goalColor):
+            moving = False
         else:
             goToTarget(right, left, .05)
     else: 
-        right.stop()
-        left.stop()
-        if(rightSensor == wallColor or leftSensor == wallColor):
+        if(rightSensor.reflection() <= wallColor or leftSensor.reflection() <= wallColor):
             #wall follow 
-            alignToWall(rightSensor, right, left)
+            alignToWall(rightSensor, leftSensor, right, left)
             dist = wallFollow(rightSensor, leftSensor, right, left, 0)
-            if (dist == 1.5): 
-                return False
-            else:  # we cleared the wall look for object again
-                goToTarget(right, left, .15)
-                rotate(right, left, 90)
-                goToObject(right, left, rightSensor, leftSensor, sonar, findObject(sonar, right, left))
+            return False
         else: 
             # find the target within the goal, and move and knock it off.
+            if(leftSensor.color() == goalColor):
+                while(rightSensor.color() != goalColor):
+                    rotate(right, left, 30)
+            else: 
+                while(leftSensor.color() != goalColor):
+                    rotate(right, left, -30)
             ev3.speaker.play_file(SoundFile.FANFARE)
-            while(sonar.distance() > .305):
-                rotate(right, left, 5)
-            else:
-                while(rightSensor.color() == goalColor and leftSensor.color() == goalColor):
-                    goToTarget(right, left, .60)
-            return True
-
-    return False
+            return moveObject(right, left, rightSensor, leftSensor, sonar)
+            
 
 def wander(colorS, lColorS, sonicS, right, left):
     # choose some direction
@@ -149,14 +188,18 @@ def wander(colorS, lColorS, sonicS, right, left):
         # choose some random direction to go in. 
         rotate(right, left, direction[random.randint(0, 2)])
         right.run(360), left.run(360)
-        while(colorS.color() != goalColor and colorS.color() != wallColor):
+        while(colorS.color() != goalColor and colorS.reflection() > wallColor and lColorS.reflection() > wallColor):
             continue
         else: 
             right.stop()
             left.stop()
-            if(colorS.color() == wallColor):
-                if not alignToWall(colorS, right, left):
-                    goToTarget(right, left, -.2)
+            if(lColorS.reflection() <= wallColor and colorS.reflection() > wallColor):
+                goToTarget(right, left, -.10)
+                rotate(right, left, -20)
+                continue
+            if(colorS.reflection() <= wallColor):
+                if not alignToWall(colorS, lColorS, right, left):
+                    goToTarget(right, left, -.05)
                     continue
                 distance = wallFollow(colorS, lColorS, right, left, 0)
                 if distance == 1.5: # we've travelled the wall for too long. 
@@ -180,6 +223,8 @@ def wander(colorS, lColorS, sonicS, right, left):
                             continue
             else:
                 ev3.speaker.play_file(SoundFile.FANFARE)
+                goToTarget(right, left, .05)
+                return moveObject(right, left, colorS, lColorS, sonicS)
 
 
 # Create your objects here.
@@ -192,5 +237,4 @@ def main():
     # Write your program here.
     ev3.speaker.beep()
     wander(colorSensor, leftColorSensor, sonicSensor, rightMotor, leftMotor)
-
 main()
